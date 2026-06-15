@@ -51,8 +51,9 @@
 # =============================================================================
 
 from __future__ import annotations
-
+import requests
 import random
+import time
 
 # Importaciones base obligatorias para cualquier componente Python en Synapse.
 # - HiveComponentBase  : clase base de la que hereda todo componente
@@ -173,10 +174,23 @@ class HiveComponent(HiveComponentBase):
     #
     def premain(self, raw_param) -> None:
         # Parsear parámetros
-        self._param = Param.parse(raw_param)
-        p = self._param
+        def premain(self, param):
+        """
+        Inicialización del componente
+        """
 
-        self.log.info(f'[{p.nombre}] premain: inicializando componente...')
+        # Configuración RESTDB
+        self.api_key = "7d33ddf81092633399a4ac51c454e08942e7e"
+        self.restdb_url = "https://demoapi-291b.restdb.io/rest/lecturasplc"
+
+        self.headers = {
+            "Content-Type": "application/json",
+            "x-apikey": self.api_key,
+            "cache-control": "no-cache"
+        }
+
+       
+
 
         # ---------------------------------------------------------------------
         # DEFINICIÓN DE COLUMNAS DE SALIDA
@@ -187,10 +201,10 @@ class HiveComponent(HiveComponentBase):
         # El nombre de la columna es como aparecerá en la base de datos de Synapse.
         # Usa nombres descriptivos en minúsculas con guión bajo.
         #
-        self.col_valor = self.out_port1.Column('valor', DataType.DOUBLE)
+        self.Tenperature = self.out_port1.Column('Tenperature', DataType.INT)
         # Añade más columnas según necesites:
-        # self.col_estado  = self.out_port1.Column('estado',  DataType.BOOLEAN)
-        # self.col_mensaje = self.out_port1.Column('mensaje', DataType.STRING)
+        self.Presion  = self.out_port1.Column('presion',  DataType.INT)
+        self.IDPieza = self.out_port1.Column('IDPieza', DataType.INT)
 
         # ---------------------------------------------------------------------
         # INICIALIZACIÓN DE RECURSOS EXTERNOS
@@ -206,7 +220,9 @@ class HiveComponent(HiveComponentBase):
         #     self.log.error(f'[{p.nombre}] error de conexión: {e}')
         #     raise  # propaga el error → Synapse mostrará el fallo
 
-        self.log.info(f'[{p.nombre}] premain: listo para iniciar')
+        self.interval = 5  # segundos
+
+        self.log.info("RandomToRestDB inicializado correctamente")
 
     # =========================================================================
     # MAIN — Bucle principal del componente
@@ -233,21 +249,22 @@ class HiveComponent(HiveComponentBase):
     #                            espera de mensajes externos, etc.)
     #
     def main(self, raw_param) -> None:
-        p = self._param
-        self.log.info(f'[{p.nombre}] main: iniciando bucle principal')
+        while self.is_runnable():
+
+            payload = self._generate_payload()
+
+            self._send_to_restdb(payload)
+
+            time.sleep(self.interval)
 
         # -----------------------------------------------------------------------
         # OPCIÓN A — Bucle periódico con interval_iteration (RECOMENDADO para
         #            colectores que leen a intervalos fijos)
         # -----------------------------------------------------------------------
-        for [ts, skip] in self.interval_iteration(p.intervalo_ns):
-
-            if skip:
+        
                 # El tick llegó tarde (sistema bajo carga). Puedes saltar la
                 # lectura costosa o simplemente seguir según tu caso de uso.
-                self.log.debug(f'[{p.nombre}] tick retrasado, saltando lectura')
-                continue
-
+           
             # -----------------------------------------------------------------
             # AQUÍ VA TU LÓGICA DE LECTURA / PROCESADO
             # -----------------------------------------------------------------
@@ -265,8 +282,7 @@ class HiveComponent(HiveComponentBase):
             #
             # self.col_valor.insert(valor, ts)
 
-            valor_ejemplo = random.uniform(0.0, 100.0)  # número aleatorio entre 0 y 100
-            self.col_valor.insert(valor_ejemplo, ts)
+           
 
         # -----------------------------------------------------------------------
         # OPCIÓN B — Bucle manual con while is_runnable() (para lógica asíncrona
@@ -277,7 +293,7 @@ class HiveComponent(HiveComponentBase):
         #     # Tu lógica aquí
         #     time.sleep(p.intervalo_ns / 1_000_000_000)
 
-        self.log.info(f'[{p.nombre}] main: bucle principal terminado')
+        
 
     # =========================================================================
     # POSTMAIN — Limpieza al detener el componente
@@ -293,9 +309,13 @@ class HiveComponent(HiveComponentBase):
     # fallaron. Usa try/except internamente para que los errores de limpieza
     # no enmascaren el error original.
     #
-    def postmain(self, raw_param) -> None:
-        p = self._param
-        self.log.info(f'[{p.nombre}] postmain: liberando recursos...')
+ def postmain(self, param):
+        """
+        Limpieza final del componente
+        """
+        self.log.info("Finalizando RandomToRestDB")
+
+
 
         # Cierra aquí los recursos abiertos en premain().
         # Ejemplo:
@@ -326,3 +346,34 @@ class HiveComponent(HiveComponentBase):
     #     # Interrumpe aquí operaciones bloqueantes, por ejemplo:
     #     # self._evento_parada.set()
     #     # self._conexion.interrupt()
+   def _generate_payload(self):
+        """
+        Genera datos aleatorios simulados
+        """
+        return {
+            "temperatura": round(random.uniform(20, 50), 2),
+            "presion": round(random.uniform(10, 200), 2),
+            "id_pieza": random.randint(1, 10)
+        }
+
+    def _send_to_restdb(self, payload):
+        """
+        Envía datos a RESTDB
+        """
+        try:
+            response = requests.post(
+                self.restdb_url,
+                json=payload,
+                headers=self.headers,
+                timeout=10
+            )
+
+            self.log.info(
+                f"Enviado {payload} -> HTTP {response.status_code}"
+            )
+
+            return response
+
+        except Exception as e:
+            self.log.error(f"Error enviando datos: {e}")
+            return None
