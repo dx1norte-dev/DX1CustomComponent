@@ -1,0 +1,23 @@
+{
+  "window_size": "middle",
+  "parameter_defines": [
+    {
+      "name": "nombre",
+      "label": "Nombre del componente",
+      "type": "string",
+      "require": false,
+      "default": "mi-componente",
+      "placeholder": "nombre-descriptivo",
+      "max": 64
+    },
+    {
+      "name": "intervalo_ms",
+      "label": "Intervalo de lectura (ms)",
+      "type": "number",
+      "require": true,
+      "min": 10,
+      "max": 3600000,
+      "default": 1000
+    }
+  ]
+}

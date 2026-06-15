@@ -1,0 +1,20 @@
+{
+  "package-name": "template-component-package",
+  "package-version": "0.1.0",
+  "package-uuid": "cb3fe8ec-086c-465c-bfbd-768d69267f0f",
+  "package-description": "Plantilla base para el desarrollo de componentes personalizados en SpeeDBee Synapse / DX1",
+  "python-components-source-dir": "source/python",
+  "author": "",
+  "license": "",
+  "license-file": "",
+  "components": {
+    "a29e6f91-77a9-4ef7-a2dc-80294c8f1f41": {
+      "name": "Template Component",
+      "description": "Componente plantilla — punto de partida para nuevos desarrollos",
+      "component-type": "python",
+      "modulename": "template_component",
+      "parameter-ui-type": "json",
+      "parameter-ui": "parameter_ui/template_component/custom_ui.json"
+    }
+  }
+}
