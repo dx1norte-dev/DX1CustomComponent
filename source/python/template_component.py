@@ -67,14 +67,33 @@ from speedbeesynapse.component.base import (
 # -----------------------------------------------------------------------------
 # (OPCIONAL) ERRORES PERSONALIZADOS
 # -----------------------------------------------------------------------------
-# Define aquí los errores que tu componente puede emitir.
-# ErrorType(código, campo_detalle) — el código aparece en la UI de Synapse.
-# Para usarlos: return MI_ERROR('descripción del problema ocurrido')
-# Descomenta y adapta si los necesitas:
+# Define aquí UN ErrorType por cada causa de error diferente que puede tener
+# tu componente. Cada uno tiene un código que aparece en la UI de Synapse.
 #
-# MI_ERROR_CONEXION = ErrorType('CONNECTION_ERROR', 'detail')
-# MI_ERROR_LECTURA  = ErrorType('READ_ERROR', 'detail')
-# ERROR_TYPES       = [MI_ERROR_CONEXION, MI_ERROR_LECTURA]
+# Formato: MI_ERROR = ErrorType('CODIGO_ERROR', 'detail')
+#   - 'CODIGO_ERROR' : texto corto que verá el usuario en la UI (mayúsculas)
+#   - 'detail'       : nombre del campo que contendrá el mensaje de detalle
+#                      (déjalo siempre como 'detail')
+#
+# Todos los ErrorType definidos se agrupan en una lista ERROR_TYPES que se
+# pasa al decorador @HiveComponentInfo. Synapse los registra todos a la vez.
+#
+# Para emitir un error desde main(): return MI_ERROR('mensaje descriptivo')
+# Esto para el componente y muestra el código + mensaje en la UI de Synapse.
+#
+# Descomenta y adapta el bloque siguiente según los errores de tu componente:
+#
+# MI_ERROR_CONEXION = ErrorType('CONNECTION_ERROR', 'detail')  # no se puede conectar
+# MI_ERROR_TIMEOUT  = ErrorType('TIMEOUT_ERROR',    'detail')  # timeout de lectura
+# MI_ERROR_LECTURA  = ErrorType('READ_ERROR',       'detail')  # fallo al leer datos
+# MI_ERROR_CONFIG   = ErrorType('CONFIG_ERROR',     'detail')  # parámetros inválidos
+#
+# ERROR_TYPES = [                  # añade aquí TODOS los ErrorType definidos arriba
+#     MI_ERROR_CONEXION,
+#     MI_ERROR_TIMEOUT,
+#     MI_ERROR_LECTURA,
+#     MI_ERROR_CONFIG,
+# ]
 
 
 # -----------------------------------------------------------------------------
@@ -126,7 +145,7 @@ class Param:
     tag      = 'collector',
     inports  = 0,
     outports = 1,
-    # error_types = ERROR_TYPES,  # descomenta si defines errores personalizados
+    # error_types = ERROR_TYPES,  # descomenta cuando hayas definido tus ErrorType arriba
 )
 class HiveComponent(HiveComponentBase):
     """
@@ -230,11 +249,15 @@ class HiveComponent(HiveComponentBase):
             # -----------------------------------------------------------------
             # AQUÍ VA TU LÓGICA DE LECTURA / PROCESADO
             # -----------------------------------------------------------------
-            # Ejemplo: leer un valor de un sensor y escribirlo en la columna
+            # Ejemplo con errores personalizados:
             #
             # try:
             #     valor = self._conexion.leer_dato()
+            # except TimeoutError as e:
+            #     # Error grave → para el componente y muestra "TIMEOUT_ERROR" en la UI
+            #     return MI_ERROR_TIMEOUT(f'sin respuesta tras {p.timeout_s}s: {e}')
             # except Exception as e:
+            #     # Error transitorio → solo log, el bucle continúa en el siguiente tick
             #     self.log.warning(f'[{p.nombre}] error de lectura: {e}')
             #     continue
             #
